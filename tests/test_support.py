@@ -67,6 +67,16 @@ class ProtocolTests(unittest.TestCase):
 
 
 class GestureTests(unittest.TestCase):
+    def test_early_horizontal_pair_preserves_other_gestures(self):
+        r=Recognizer();r.feed(frame(),0)
+        self.assertEqual(r.feed(frame(80),.03),[])
+        self.assertEqual(r.feed(frame(150),.05)[0].phase,'begin')
+        self.assertEqual(r.feed(frame(190),.07)[0].phase,'update')
+        r=Recognizer();r.feed(frame(),0)
+        self.assertEqual(r.feed(frame(0,150),.05),[], 'Vertical threshold is unchanged')
+        r=Recognizer();r.feed(Frame((Contact(1,0,0),)),0)
+        self.assertEqual(r.feed(Frame((Contact(1,150,0),)),.05),[], 'Page swipe threshold is unchanged')
+
     def test_single_finger_double_tap_and_mixed_pairs(self):
         r=Recognizer()
         one=Frame((Contact(1,0,0),))
@@ -118,7 +128,7 @@ class GestureTests(unittest.TestCase):
         self.assertEqual(tap(r,.4),[])
 
     def test_scroll_hold_replaced_finger_and_three_fingers_rejected(self):
-        for bad in (frame(250), Frame((Contact(8,-300,0),Contact(9,300,0))),
+        for bad in (frame(0,250), Frame((Contact(8,-300,0),Contact(9,300,0))),
                     Frame((Contact(1,-300,0),Contact(2,300,0),Contact(3,0,0)))):
             r=Recognizer();tap(r,0);r.feed(frame(),.25);r.feed(bad,.3)
             self.assertEqual(r.feed(Frame(()),.4),[])

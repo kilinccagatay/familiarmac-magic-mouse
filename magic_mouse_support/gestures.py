@@ -25,6 +25,7 @@ class Thresholds:
     chord_seconds: float = .10
     tap_travel: float = 220
     gesture_travel: float = 300
+    horizontal_pair_travel: float = 140
     gap_seconds: float = .75
 
     def __post_init__(self):
@@ -124,6 +125,9 @@ class Recognizer:
         if not old_mode:
             if spread >= self.t.gesture_travel and spread > travel * 1.5:
                 s['mode'] = 'pinch'
+            elif (abs(dx) >= self.t.horizontal_pair_travel and abs(dx) > abs(dy) * 1.5
+                  and travel > spread * 1.5):
+                s['mode'] = 'swipe'
             elif travel >= self.t.gesture_travel and travel > spread * 1.5:
                 s['mode'] = 'swipe'
         if s['mode']:
