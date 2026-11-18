@@ -7,13 +7,17 @@ and [magic-mouse-gestures](https://github.com/brenoperucchi/magic-mouse-gestures
 See [upstream attribution](THIRD_PARTY_NOTICES.md) and the shipped original licenses.
 
 It decodes Magic Mouse 1, Lightning and USB-C HID reports into contacts, then
-recognizes two-finger double taps, swipes and pinches. It **reads only**: no evdev
+recognizes one- and two-finger double taps, swipes and pinches. It **reads only**: no evdev
 grab, synthetic middle click, scroll replacement, driver reload or keyboard remap.
 Desktop adapters decide what a recognized gesture should do.
 
-**Status: experimental 0.1.0.** Parser and recognizer regression tests pass;
+**Status: experimental 0.2.0.** Parser and recognizer regression tests pass;
 model-by-model hardware validation remains explicit in
 [compatibility](docs/COMPATIBILITY.md). This is not a drop-in full macOS gesture stack.
+
+## Release 0.2.0
+
+Adds one-finger double taps and horizontal swipes, complete swipe displacement and cancellation events, and decoding of the original mouse’s interleaved pointer reports. FamiliarMac uses these events for page navigation, document zoom and continuous workspace swipes. [Release notes](docs/releases/v0.2.0.md).
 
 ## Use
 
@@ -35,7 +39,7 @@ from magic_mouse_support import decode, Recognizer
 recognizer = Recognizer()  # one per physical device
 for frame in decode(hid_report_bytes, product=0x030D):
     for event in recognizer.feed(frame, monotonic_seconds):
-        if event.kind == 'double-tap':
+        if event.kind == 'double-tap' and event.fingers == 2:
             show_overview()
 ```
 
@@ -53,8 +57,13 @@ while the active unlocked session opts in and maintains a heartbeat. The
 this independently from the Logitech middle-button shortcut.
 
 No `wtype`/`ydotool` fallback, no per-user shell commands executed as root, no
-new keyboard interception. Swipe/pinch recognition is available to future
-adapters; this FamiliarMac integration currently enables double-tap only.
+new keyboard interception. FamiliarMac 1.2.0 provides optional
+one-finger page navigation, two-finger workspace/full-screen navigation and
+one-finger double-tap document zoom. Only the adapter (not this library) forwards
+the matched relative-pointer endpoint when it needs to suppress duplicate wheel
+scrolling. Pinch remains an event API without a desktop action.
+Smart Zoom uses supported applications' zoom commands, not macOS's semantic
+content-aware framing. See the [behavior and hardware limits](docs/COMPATIBILITY.md).
 
 ## Why another project?
 

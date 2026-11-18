@@ -1,0 +1,31 @@
+name: Release
+on:
+  push:
+    branches: [main]
+    paths: [pyproject.toml]
+    tags: ['v[0-9]*']
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test and build
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then test "$GITHUB_REF_NAME" = "v$(python -c 'import magic_mouse_support; print(magic_mouse_support.__version__)')"; fi
+          python -m unittest discover -s tests -v
+          python -m pip install build
+          python -m build
+          cd dist
+          sha256sum *.whl *.tar.gz > SHA256SUMS
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v$(python -c 'import magic_mouse_support; print(magic_mouse_support.__version__)')"
+          gh release create "$tag" dist/* --target "$GITHUB_SHA" --title "FamiliarMac Magic Mouse $tag" --notes-file "docs/releases/$tag.md" --draft
+          gh release edit "$tag" --draft=false --latest
