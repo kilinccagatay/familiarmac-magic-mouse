@@ -45,6 +45,13 @@ def decode(data, product):
     """
     if product not in MODELS or not data:
         raise ValueError('Unsupported model or empty report')
+    # Original Magic Mouse also interleaves its standard pointer report.
+    # Its HID descriptor declares ID 0x10: two button bits, six padding bits,
+    # and two 16-bit relative axes. It carries no touch lifecycle information.
+    if product == 0x030D and data[0] == 0x10:
+        if len(data) != 6:
+            raise ValueError('Invalid standard pointer report length')
+        return [Frame(None, bool(data[1] & 3))]
     packets = [data]
     if data[0] == 0xF7:
         if len(data) < 2 or not 0 < data[1] < len(data) - 2:

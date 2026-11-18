@@ -22,6 +22,8 @@ class Reader:
         self.recognizer = Recognizer()
         self.fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_CLOEXEC)
         self.frames = self.invalid = 0
+        self.contacts = self.last_contacts = 0
+        self.last_contact_at = 0
 
     def read(self, now):
         data = os.read(self.fd, 256)
@@ -32,10 +34,16 @@ class Reader:
         except ValueError:
             self.invalid += 1
             self.recognizer.reset()
+            self.contacts = 0
             return []
         self.frames += len(frames)
         gestures = []
         for frame in frames:
+            if frame.contacts is not None:
+                self.contacts = len(frame.contacts)
+                if self.contacts:
+                    self.last_contacts = self.contacts
+                    self.last_contact_at = now
             gestures.extend(self.recognizer.feed(frame, now))
         return gestures
 

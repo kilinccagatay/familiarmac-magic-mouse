@@ -62,22 +62,24 @@ class Recognizer:
             if s is None:
                 return []
             if s['mode']:
-                return [Gesture(s['mode'], s['count'], 'end')]
-            valid = (not s['blocked'] and s['count'] == 2 and now - s['start'] <= self.t.tap_seconds
-                     and s['travel'] <= self.t.tap_travel and s['chord'])
+                return [Gesture(s['mode'], s['count'], 'cancel' if s['blocked'] else 'end', s.get('dx', 0), s.get('dy', 0), s.get('scale', 1))]
+            valid = (not s['blocked'] and s['count'] in (1, 2) and now - s['start'] <= self.t.tap_seconds
+                     and s['travel'] <= self.t.tap_travel and (s['count'] == 1 or s['chord']))
             if not valid:
                 self.last_tap = None
                 return []
             # Pair distinct complete contact sequences. A triple tap fires once.
-            if self.last_tap is not None and 0 <= now - self.last_tap <= self.t.double_seconds:
+            if self.last_tap is not None and self.last_tap[1] == s['count'] and 0 <= now - self.last_tap[0] <= self.t.double_seconds:
                 self.last_tap = None
-                return [Gesture('double-tap', 2)]
-            self.last_tap = now
+                return [Gesture('double-tap', s['count'])]
+            self.last_tap = (now, s['count'])
             return []
         if self.session is None:
             self.session = dict(start=now, origins={}, count=0, travel=0, blocked=frame.clicked,
                                 chord=False, mode=None, distance=None, pair=None)
         s = self.session
+        if s['mode'] and len(points) > s['count']:
+            s['blocked'] = True
         s['count'] = max(s['count'], len(points))
         if len(points) == 2 and now - s['start'] <= self.t.chord_seconds:
             s['chord'] = True
@@ -92,6 +94,18 @@ class Recognizer:
             s['travel'] = max(s['travel'], math.hypot(delta(point[0], origin[0]), delta(point[1], origin[1])))
         if len(s['origins']) > 2:
             s['blocked'] = True
+        if len(points) == 1 and s['count'] == 1 and not s['blocked']:
+            ident, point = next(iter(points.items()))
+            dx, dy = (delta(point[i], s['origins'][ident][i]) for i in (0, 1))
+            s['dx'], s['dy'] = dx, dy
+            # Preserve vertical scrolling: one-finger gestures are horizontal only.
+            if abs(dx) >= self.t.gesture_travel and abs(dx) > abs(dy) * 1.5:
+                old_mode = s['mode']
+                s['dx'], s['dy'] = dx, dy
+                s['mode'] = 'swipe'
+                self.last_tap = None
+                return [Gesture('swipe', 1, 'update' if old_mode else 'begin', dx, dy)]
+            return []
         if len(points) != 2 or s['blocked']:
             return []
         ids = tuple(sorted(points))
@@ -113,6 +127,7 @@ class Recognizer:
             elif travel >= self.t.gesture_travel and travel > spread * 1.5:
                 s['mode'] = 'swipe'
         if s['mode']:
+            s['dx'], s['dy'], s['scale'] = dx, dy, distance / s['distance'] if s['distance'] else 1
             self.last_tap = None
             return [Gesture(s['mode'], 2, 'update' if old_mode else 'begin', dx, dy,
                             distance / s['distance'] if s['distance'] else 1)]

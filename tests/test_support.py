@@ -40,6 +40,20 @@ class ProtocolTests(unittest.TestCase):
         for data in (b'', b'\xf7', b'\xf7\xff'+a, b'\xf7\x02\xf7\x00'+b, a+b'\0', b'\x29',packet(contacts=[(1,0,0,True),(1,1,1,True)])):
             with self.assertRaises(ValueError):decode(data,0x030D)
 
+    def test_original_pointer_report_preserves_taps_and_cancels_click(self):
+        r=Recognizer()
+        one=packet(contacts=[(1,0,0,True)])
+        for start in (0,.25):
+            r.feed(decode(one,0x030D)[0],start)
+            self.assertEqual(r.feed(decode(bytes([0x10,0,1,0,0,0]),0x030D)[0],start+.05),[])
+            events=r.feed(decode(packet(),0x030D)[0],start+.1)
+        self.assertEqual(events[0].kind,'double-tap')
+        r=Recognizer();r.feed(decode(one,0x030D)[0],0)
+        r.feed(decode(bytes([0x10,1,0,0,0,0]),0x030D)[0],.05)
+        self.assertEqual(r.feed(decode(packet(),0x030D)[0],.1),[])
+        for malformed in (b'\x10',bytes([0x10])+bytes(6)):
+            with self.assertRaises(ValueError):decode(malformed,0x030D)
+
     def test_short_pointer_frame_does_not_end_touch(self):
         self.assertEqual(decode(b'\x12\x01'+bytes(6),0x0269),[Frame(None,True)])
 
@@ -53,6 +67,35 @@ class ProtocolTests(unittest.TestCase):
 
 
 class GestureTests(unittest.TestCase):
+    def test_single_finger_double_tap_and_mixed_pairs(self):
+        r=Recognizer()
+        one=Frame((Contact(1,0,0),))
+        r.feed(one,0);self.assertEqual(r.feed(Frame(()),.1),[])
+        self.assertEqual(tap(r,.2),[], 'Never combine one- and two-finger taps')
+        r.feed(one,.45);self.assertEqual(r.feed(Frame(()),.55),[])
+        r.feed(one,.7);events=r.feed(Frame(()),.8)
+        self.assertEqual([(e.kind,e.fingers) for e in events],[('double-tap',1)])
+
+    def test_single_finger_horizontal_swipe_and_cancel(self):
+        one=lambda x,y:Frame((Contact(1,x,y),))
+        r=Recognizer();r.feed(one(0,0),0)
+        self.assertEqual(r.feed(one(0,600),.2),[], 'Vertical scroll is not page navigation')
+        r.feed(Frame(()),.3)
+        r.feed(one(0,0),.4)
+        self.assertEqual(r.feed(one(600,20),.6)[0].phase,'begin')
+        end=r.feed(Frame(()),.7)[0]
+        self.assertEqual((end.phase,end.fingers,end.dx),('end',1,600))
+        r.feed(one(0,0),.8);r.feed(one(600,20),1.0)
+        r.feed(Frame(None,True),1.05)
+        self.assertEqual(r.feed(Frame(()),1.1)[0].phase,'cancel')
+
+    def test_swipe_reversal_and_second_finger_cancel(self):
+        one=lambda x:Frame((Contact(1,x,0),))
+        r=Recognizer();r.feed(one(0),0);r.feed(one(800),.1);r.feed(one(20),.2)
+        self.assertEqual(r.feed(Frame(()),.3)[0].dx,20)
+        r.feed(one(0),.4);r.feed(one(800),.5);r.feed(frame(800),.6)
+        self.assertEqual(r.feed(Frame(()),.7)[0].phase,'cancel')
+
     def test_double_tap_once(self):
         r=Recognizer()
         self.assertEqual(tap(r,0),[])
