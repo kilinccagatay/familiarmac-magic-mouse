@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "familiarmac-magic-mouse"
+version = "0.1.0"
+description = "Passive Linux Magic Mouse HID decoding and deterministic gesture recognition"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+readme = "README.md"
+authors = [{name = "Çağatay Kılınç"}]
+
+[project.scripts]
+magic-mouse-support = "magic_mouse_support.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["magic_mouse_support*"]
+
+[tool.setuptools]
+license-files = ["LICENSE", "licenses/*.txt", "THIRD_PARTY_NOTICES.md"]
