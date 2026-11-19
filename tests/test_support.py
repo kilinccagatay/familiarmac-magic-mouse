@@ -157,6 +157,35 @@ class GestureTests(unittest.TestCase):
         self.assertEqual(r.feed(frame(400),.1)[0].kind,'swipe')
         self.assertEqual(r.feed(Frame((Contact(1,-700,0),Contact(2,700,0))),.2)[0].kind,'swipe')
 
+    def test_long_swipe_direction_and_reversal(self):
+        for fingers in (1, 2):
+            for direction in (-1, 1):
+                r = Recognizer()
+                def points(x):
+                    return Frame(tuple(Contact(i, direction * x, i * 300) for i in range(fingers)))
+                events = []
+                for i, x in enumerate((-1100, -700, -200, 300, 800, 1000)):
+                    events += r.feed(points(x), i * .05)
+                self.assertTrue(all(e.dx * direction > 0 for e in events))
+                end = r.feed(Frame(()), .31)[0]
+                self.assertEqual(end.dx, direction * 2100)
+                self.assertEqual(end.phase, 'end')
+                r = Recognizer()
+                for i, x in enumerate((-1100, -700, -200, 300, 800, 1000, 300, -200, -700, -1100)):
+                    r.feed(points(x), i * .05)
+                self.assertEqual(r.feed(Frame(()), .51)[0].dx, 0)
+
+    def test_incremental_wrap_and_long_pinch(self):
+        r = Recognizer()
+        for i, x in enumerate((1800, 2000, -2000, -1600)):
+            events = r.feed(Frame((Contact(1, x, 0),)), i * .05)
+        self.assertEqual(events[-1].dx, 696)
+        r = Recognizer()
+        for i, x in enumerate((300, 600, 900, 1200)):
+            events = r.feed(Frame((Contact(1, -x, 0), Contact(2, x, 0))), i * .05)
+        self.assertEqual(events[-1].kind, 'pinch')
+        self.assertEqual(events[-1].scale, 4)
+
     def test_settings_validation(self):
         for value in (0,-1,math.nan,math.inf):
             with self.assertRaises(ValueError):Thresholds(tap_seconds=value)

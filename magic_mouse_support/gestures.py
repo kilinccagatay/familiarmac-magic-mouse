@@ -77,7 +77,7 @@ class Recognizer:
             return []
         if self.session is None:
             self.session = dict(start=now, origins={}, count=0, travel=0, blocked=frame.clicked,
-                                chord=False, mode=None, distance=None, pair=None)
+                                chord=False, mode=None, distance=None, pair=None, previous={}, movement={})
         s = self.session
         if s['mode'] and len(points) > s['count']:
             s['blocked'] = True
@@ -91,13 +91,20 @@ class Recognizer:
                 if now - s['start'] > self.t.chord_seconds:
                     s['blocked'] = True
                 s['origins'][ident] = point
-            origin = s['origins'][ident]
-            s['travel'] = max(s['travel'], math.hypot(delta(point[0], origin[0]), delta(point[1], origin[1])))
+                s['previous'][ident] = point
+                s['movement'][ident] = (0, 0)
+            # Unwrap adjacent samples, not the distance from the initial touch.
+            # A long monotonic swipe may exceed half the 12-bit coordinate range.
+            previous = s['previous'][ident]
+            s['movement'][ident] = tuple(s['movement'][ident][axis] + delta(point[axis], previous[axis])
+                                        for axis in (0, 1))
+            s['previous'][ident] = point
+            s['travel'] = max(s['travel'], math.hypot(*s['movement'][ident]))
         if len(s['origins']) > 2:
             s['blocked'] = True
         if len(points) == 1 and s['count'] == 1 and not s['blocked']:
             ident, point = next(iter(points.items()))
-            dx, dy = (delta(point[i], s['origins'][ident][i]) for i in (0, 1))
+            dx, dy = s['movement'][ident]
             s['dx'], s['dy'] = dx, dy
             # Preserve vertical scrolling: one-finger gestures are horizontal only.
             if abs(dx) >= self.t.gesture_travel and abs(dx) > abs(dy) * 1.5:
@@ -110,15 +117,15 @@ class Recognizer:
         if len(points) != 2 or s['blocked']:
             return []
         ids = tuple(sorted(points))
-        a, b = (points[i] for i in ids)
-        distance = math.hypot(delta(a[0], b[0]), delta(a[1], b[1]))
+        a, b = (tuple(s['origins'][i][axis] + s['movement'][i][axis] for axis in (0, 1)) for i in ids)
+        distance = math.hypot(a[0] - b[0], a[1] - b[1])
         if s['pair'] is None:
             s['pair'], s['distance'] = ids, distance
         if s['pair'] != ids:
             s['blocked'] = True
             return []
-        dx = sum(delta(p[0], s['origins'][i][0]) for i, p in points.items()) / 2
-        dy = sum(delta(p[1], s['origins'][i][1]) for i, p in points.items()) / 2
+        dx = sum(s['movement'][i][0] for i in ids) / 2
+        dy = sum(s['movement'][i][1] for i in ids) / 2
         travel = math.hypot(dx, dy)
         spread = abs(distance - s['distance'])
         old_mode = s['mode']
