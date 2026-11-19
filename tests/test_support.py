@@ -67,6 +67,15 @@ class ProtocolTests(unittest.TestCase):
 
 
 class GestureTests(unittest.TestCase):
+    def test_page_swipe_streams_reversal_through_recognition_deadzone(self):
+        r=Recognizer()
+        r.feed(Frame((Contact(1,0,0),)),0)
+        self.assertEqual(r.feed(Frame((Contact(1,400,0),)),.1)[0].phase,'begin')
+        for i,x in enumerate((200,0,-100)):
+            event=r.feed(Frame((Contact(1,x,0),)),.2+i*.05)[0]
+            self.assertEqual((event.phase,event.dx),('update',x))
+        self.assertEqual(r.feed(Frame(()),.4)[0].phase,'end')
+
     def test_early_horizontal_pair_preserves_other_gestures(self):
         r=Recognizer();r.feed(frame(),0)
         self.assertEqual(r.feed(frame(80),.03),[])

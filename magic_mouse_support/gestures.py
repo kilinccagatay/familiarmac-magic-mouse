@@ -107,7 +107,7 @@ class Recognizer:
             dx, dy = s['movement'][ident]
             s['dx'], s['dy'] = dx, dy
             # Preserve vertical scrolling: one-finger gestures are horizontal only.
-            if abs(dx) >= self.t.gesture_travel and abs(dx) > abs(dy) * 1.5:
+            if s['mode'] == 'swipe' or (abs(dx) >= self.t.gesture_travel and abs(dx) > abs(dy) * 1.5):
                 old_mode = s['mode']
                 s['dx'], s['dy'] = dx, dy
                 s['mode'] = 'swipe'
