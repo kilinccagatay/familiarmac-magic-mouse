@@ -11,13 +11,13 @@ recognizes one- and two-finger double taps, swipes and pinches. It **reads only*
 grab, synthetic middle click, scroll replacement, driver reload or keyboard remap.
 Desktop adapters decide what a recognized gesture should do.
 
-**Status: experimental 0.2.1.** Parser and recognizer regression tests pass;
+**Status: experimental 0.2.2.** Parser and recognizer regression tests pass;
 model-by-model hardware validation remains explicit in
 [compatibility](docs/COMPATIBILITY.md). This is not a drop-in full macOS gesture stack.
 
-## Release 0.2.1
+## Release 0.2.2
 
-Recognizes two-finger horizontal swipes earlier and preserves direction and distance during long gestures, including coordinate wrap and reversals. [Release notes](docs/releases/v0.2.1.md).
+One-finger swipe progress now continues smoothly when a gesture reverses through its initial recognition threshold. Two-finger gestures, click handling and double taps retain their existing behavior. [Release notes](docs/releases/v0.2.2.md).
 
 ## Use
 
@@ -61,7 +61,7 @@ new keyboard interception. FamiliarMac 1.2.0 provides optional
 one-finger page navigation, two-finger workspace/full-screen navigation and
 one-finger double-tap document zoom. Only the adapter (not this library) forwards
 the matched relative-pointer endpoint when it needs to suppress duplicate wheel
-scrolling. Pinch remains an event API without a desktop action.
+scrolling. Recognized one-finger swipes continue emitting progress through the initial recognition deadzone when reversed, so consumers can implement continuous page navigation. Pinch remains an event API without a desktop action.
 Smart Zoom uses supported applications' zoom commands, not macOS's semantic
 content-aware framing. See the [behavior and hardware limits](docs/COMPATIBILITY.md).
 

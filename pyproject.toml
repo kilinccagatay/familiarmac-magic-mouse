@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "familiarmac-magic-mouse"
-version = "0.2.1"
+version = "0.2.2"
 description = "Passive Linux Magic Mouse HID decoding and deterministic gesture recognition"
 requires-python = ">=3.10"
 license = {text = "MIT"}
