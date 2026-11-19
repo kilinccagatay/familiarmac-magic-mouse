@@ -11,13 +11,13 @@ recognizes one- and two-finger double taps, swipes and pinches. It **reads only*
 grab, synthetic middle click, scroll replacement, driver reload or keyboard remap.
 Desktop adapters decide what a recognized gesture should do.
 
-**Status: experimental 0.2.0.** Parser and recognizer regression tests pass;
+**Status: experimental 0.2.1.** Parser and recognizer regression tests pass;
 model-by-model hardware validation remains explicit in
 [compatibility](docs/COMPATIBILITY.md). This is not a drop-in full macOS gesture stack.
 
-## Release 0.2.0
+## Release 0.2.1
 
-Adds one-finger double taps and horizontal swipes, complete swipe displacement and cancellation events, and decoding of the original mouse’s interleaved pointer reports. FamiliarMac uses these events for page navigation, document zoom and continuous workspace swipes. [Release notes](docs/releases/v0.2.0.md).
+Recognizes two-finger horizontal swipes earlier and preserves direction and distance during long gestures, including coordinate wrap and reversals. [Release notes](docs/releases/v0.2.1.md).
 
 ## Use
 
